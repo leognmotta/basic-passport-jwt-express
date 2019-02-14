@@ -72,3 +72,7 @@ exports.postLogin = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getUser = async (req, res, next) => {
+  return res.json({ user: req.user });
+};
