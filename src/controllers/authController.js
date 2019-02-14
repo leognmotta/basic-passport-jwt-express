@@ -54,6 +54,14 @@ exports.postLogin = async (req, res, next) => {
       throw error;
     }
 
+    const isEqual = await user.comparePassword(password);
+
+    if (!isEqual) {
+      const error = new Error('Bad password!');
+      error.status = 400;
+      throw error;
+    }
+
     await passport.authenticate(password);
     const payload = { _id: user._id.toString() };
     const token = jwt.sign(payload, process.env.SECRET_OR_KEY, {
