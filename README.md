@@ -2,7 +2,7 @@
 
 **Note: the frontend app for this api can be found on the link below:**
 
-[twitter-clone-react](https://github.com/leomotta121/basic-passport-jwt-react)
+[basic-passport-jwt-react](https://github.com/leomotta121/basic-passport-jwt-react)
 
 ## Instructions:
 
