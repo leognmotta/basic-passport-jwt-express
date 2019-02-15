@@ -1,59 +1,55 @@
 // Built in node.js
 const http = require('http');
 
-// Require third part libraries
+// Third part libs
 const express = require('express');
-const mongoose = require('mongoose');
+const logger = require('morgan');
 const bodyParser = require('body-parser');
 const passport = require('passport');
-const passportJWT = require('passport-jwt');
+const pe = require('parse-error');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const compression = require('compression');
+const helmet = require('helmet');
 
-// Initiate express app & create the server
+// Middlerwares
+const { catch404, errorHandler } = require('./middlewares/errors');
+
+// Routes
+const v1 = require('./routes/index.v1');
+
+// Models
+
 const app = express();
-const server = http.Server(app);
+const server = http.createServer(app);
 
-// Require Middlewares
-const CORS = require('./middlewares/CORS');
-const errors = require('./middlewares/errors');
-
-// passportJWT setup
-const JWTStrategy = passportJWT.Strategy;
-const ExtractJWT = passportJWT.ExtractJwt;
-const options = {
-  jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.SECRET_OR_KEY
-};
-const strategy = new JWTStrategy(options, async (payload, next) => {
-  const user = await User.findOne({ _id: payload._id });
-  next(null, user);
-});
-
-// User model
-const User = require('./models/user');
-
-// Require routes
-const authRoute = require('./routes/authRoutes');
-const protectedRoute = require('./routes/protectedRoutes');
-
-// Body-parser setup
+app.use(helmet());
+app.use(cors());
+if (process.env.APP === 'production') {
+  app.use(logger('combined'));
+} else {
+  app.use(logger('dev'));
+}
+app.use(compression());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// CORS
-app.use(CORS);
-
-// Use passport
-passport.use(strategy);
+//Passport
 app.use(passport.initialize());
 
 // Use routes
-app.use('/auth', authRoute);
-app.use('/protected', protectedRoute);
+app.use('/v1', v1);
 
-// Error Handling
-app.use(errors);
+// Catch 404 and foward to error handler
+app.use(catch404);
 
-// Connect to DATABASE
+// Error handler
+app.use(errorHandler);
+
+process.on('unhandledRejection', error => {
+  console.log('Uncaught Error', pe(error));
+});
+
 mongoose
   .connect(
     `mongodb+srv://${process.env.DB_USER}:${
@@ -62,8 +58,7 @@ mongoose
     { useNewUrlParser: true, useFindAndModify: false, useCreateIndex: true }
   )
   .then(result => {
-    // Listen to server
-    server.listen(process.env.PORT || 3000, () => {
+    server.listen(process.env.PORT || 8080, () => {
       console.log(`App listening on port ${process.env.PORT || 8080}`);
     });
   })

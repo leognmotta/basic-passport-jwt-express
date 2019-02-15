@@ -1,6 +1,3 @@
-const passport = require('passport');
-const jwt = require('jsonwebtoken');
-
 const User = require('../models/user');
 
 exports.postSignUp = async (req, res, next) => {
@@ -8,71 +5,55 @@ exports.postSignUp = async (req, res, next) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      const error = new Error('Please fill all fields!');
+      const error = new Error('Por favor preencha todos os campos.');
       error.status = 400;
       throw error;
     }
 
     if (await User.findOne({ email })) {
-      const error = new Error('Email registered!');
+      const error = new Error('Este email já está cadastrado.');
       error.status = 400;
       throw error;
     }
 
-    const newUser = {
-      name: name,
-      email: email,
-      password: password
-    };
+    const user = await User.create({ name, email, password });
 
-    const user = await User.create(newUser);
-
-    return res.status(201).json({
-      message: 'User created!',
-      userId: user._id.toString()
-    });
+    return res.status(201).json({ message: 'Usuário criado com sucesso!' });
   } catch (error) {
     next(error);
   }
 };
 
-exports.postLogin = async (req, res, next) => {
+exports.postSignIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      const error = new Error('Please fill all fields!');
+      const error = new Error('Por favor preencha todos os campos.');
       error.status = 400;
       throw error;
     }
 
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email });
 
-    if (!user) {
-      const error = new Error('User not found!');
-      error.status = 404;
-      throw error;
-    }
+    let isEqual;
+    if (user) isEqual = await user.comparePassword(password);
 
-    const isEqual = await user.comparePassword(password);
-
-    if (!isEqual) {
-      const error = new Error('Bad password!');
+    if (!user || !isEqual) {
+      const error = new Error('Email ou senha incorretos.');
       error.status = 400;
       throw error;
     }
 
-    await passport.authenticate(password);
-    const payload = { _id: user._id.toString() };
-    const token = jwt.sign(payload, process.env.SECRET_OR_KEY, {
-      expiresIn: '1h'
-    });
-    return res.status(200).json({ userId: payload._id, token: token });
+    const token = user.getToken();
+
+    return res.status(200).json({ userId: user._id, token: token });
   } catch (error) {
     next(error);
   }
 };
 
-exports.getUser = async (req, res, next) => {
-  return res.json({ user: req.user });
+exports.getIsTokenValid = (req, res, body) => {
+  const user = req.user;
+  res.status(200).json({ user });
 };
